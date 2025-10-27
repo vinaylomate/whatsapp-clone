@@ -1,0 +1,36 @@
+apiVersion: skaffold/v4beta11
+kind: Config
+metadata:
+  name: whatsapp-clone
+build:
+  artifacts:
+    - image: api-gateway
+      context: api-gateway
+    - image: discovery-service
+      context: discovery-service
+    - image: auth-service
+      context: auth-service
+    - image: chat-service
+      context: chat-service
+    - image: presence-service
+      context: presence-service
+manifests:
+  rawYaml:
+    - k8s/namespace.yaml
+    - k8s/discovery/*.yaml
+    - k8s/gateway/*.yaml
+    - k8s/postgres-chat/*.yaml
+    - k8s/postgres-auth/*.yaml
+    - k8s/auth/*.yaml
+    - k8s/chat/*.yaml
+    - k8s/presence/*.yaml
+    - k8s/monitoring/*.yaml
+profiles:
+  - name: dev
+    deploy:
+      kubectl: {}
+  - name: gke
+    build:
+      platforms: ["linux/amd64"]
+    deploy:
+      kubectl: {}

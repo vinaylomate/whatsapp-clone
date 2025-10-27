@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata: { name: postgres-auth, namespace: whatsapp }
+spec:
+  serviceName: postgres-auth
+  replicas: 1
+  selector: { matchLabels: { app: postgres-auth } }
+  template:
+    metadata: { labels: { app: postgres-auth } }
+    spec:
+      containers:
+        - name: pg
+          image: postgres:16
+          env:
+            - { name: POSTGRES_USER, value: auth }
+            - { name: POSTGRES_PASSWORD, value: authpass }
+            - { name: POSTGRES_DB, value: authdb }
+          ports: [ { containerPort: 5432 } ]
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+    - metadata: { name: data }
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        resources: { requests: { storage: 5Gi } }

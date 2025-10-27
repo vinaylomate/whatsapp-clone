@@ -1,0 +1,135 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: grafana, namespace: whatsapp }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: grafana } }
+  template:
+    metadata: { labels: { app: grafana } }
+    spec:
+      containers:
+        - name: grafana
+          image: grafana/grafana:11.1.0
+          env:
+            - { name: GF_SECURITY_ADMIN_USER, value: admin }
+            - { name: GF_SECURITY_ADMIN_PASSWORD, value: admin }
+          ports: [ { containerPort: 3000 } ]
+          volumeMounts:
+            - name: datasources
+              mountPath: /etc/grafana/provisioning/datasources
+            - name: dashboards
+              mountPath: /etc/grafana/provisioning/dashboards
+      volumes:
+        - name: datasources
+          configMap: { name: grafana-datasource }
+        - name: dashboards
+          configMap: { name: grafana-dashboards }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: grafana, namespace: whatsapp }
+spec:
+  ports: [ { port: 3000, targetPort: 3000 } ]
+  selector: { app: grafana }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata: { name: grafana-datasource, namespace: whatsapp }
+data:
+  datasource.yml: |
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        access: proxy
+        url: http://prometheus-server:9090
+        isDefault: true
+---
+apiVersion: v1
+kind: ConfigMap
+metadata: { name: grafana-dashboards, namespace: whatsapp }
+data:
+  dashboard.yml: |
+    apiVersion: 1
+    providers:
+      - name: 'default'
+        orgId: 1
+        folder: ''
+        type: file
+        options:
+          path: /etc/grafana/provisioning/dashboards
+  whatsapp.json: |
+    {
+      "title": "Whatsapp Clone \u2014 Resilience & Latency",
+      "schemaVersion": 39,
+      "panels": [
+        {
+          "type": "timeseries",
+          "title": "HTTP p95 Latency (by URI)",
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket[5m])) by (le,uri))",
+              "legendFormat": "{{uri}}"
+            }
+          ],
+          "gridPos": {
+            "h": 8,
+            "w": 24,
+            "x": 0,
+            "y": 0
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "Retry Calls",
+          "targets": [
+            {
+              "expr": "sum(rate(resilience4j_retry_calls_total[1m])) by (name,kind)",
+              "legendFormat": "{{name}} {{kind}}"
+            }
+          ],
+          "gridPos": {
+            "h": 8,
+            "w": 24,
+            "x": 0,
+            "y": 8
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "Circuit Breaker State Transitions",
+          "targets": [
+            {
+              "expr": "resilience4j_circuitbreaker_state_transitions_total",
+              "legendFormat": "{{name}} -> {{state}}"
+            }
+          ],
+          "gridPos": {
+            "h": 8,
+            "w": 24,
+            "x": 0,
+            "y": 16
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "Bulkhead Available vs Max",
+          "targets": [
+            {
+              "expr": "resilience4j_bulkhead_available_concurrent_calls",
+              "legendFormat": "{{name}} available"
+            },
+            {
+              "expr": "resilience4j_bulkhead_max_allowed_concurrent_calls",
+              "legendFormat": "{{name}} max"
+            }
+          ],
+          "gridPos": {
+            "h": 8,
+            "w": 24,
+            "x": 0,
+            "y": 24
+          }
+        }
+      ]
+    }

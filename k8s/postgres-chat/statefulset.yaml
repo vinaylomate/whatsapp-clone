@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata: { name: postgres-chat, namespace: whatsapp }
+spec:
+  serviceName: postgres-chat
+  replicas: 1
+  selector: { matchLabels: { app: postgres-chat } }
+  template:
+    metadata: { labels: { app: postgres-chat } }
+    spec:
+      containers:
+        - name: pg
+          image: postgres:16
+          env:
+            - { name: POSTGRES_USER, value: chat }
+            - { name: POSTGRES_PASSWORD, value: chatpass }
+            - { name: POSTGRES_DB, value: chatdb }
+          ports: [ { containerPort: 5432 } ]
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+    - metadata: { name: data }
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        resources: { requests: { storage: 10Gi } }

@@ -1,0 +1,25 @@
+server:
+  port: ${{SERVER_PORT:9103}}
+
+spring:
+  application:
+    name: presence-service
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: ${{EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://discovery-service:8762/eureka/}}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  metrics:
+    tags:
+      application: presence-service
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+      percentiles:
+        http.server.requests: 0.95,0.99

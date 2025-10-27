@@ -1,0 +1,53 @@
+server:
+  port: ${{SERVER_PORT:9101}}
+
+spring:
+  application:
+    name: chat-service
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://postgres-chat:5432/chatdb}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:vinay}
+    jpa:
+      hibernate:
+        ddl-auto: update
+      properties:
+        hibernate.dialect: org.hibernate.dialect.PostgreSQLDialect
+  resilience4j:
+    circuitbreaker:
+      instances:
+        presence:
+          slidingWindowSize: 10
+          failureRateThreshold: 50
+          waitDurationInOpenState: 5s
+          permittedNumberOfCallsInHalfOpenState: 3
+    retry:
+      instances:
+        presence:
+          maxAttempts: 2
+          waitDuration: 200ms
+    bulkhead:
+      instances:
+        presence:
+          maxThreadPoolSize: 4
+          coreThreadPoolSize: 2
+          queueCapacity: 10
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: ${{EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://discovery-service:8762/eureka/}}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  metrics:
+    tags:
+      application: chat-service
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+      percentiles:
+        http.server.requests: 0.95,0.99

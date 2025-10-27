@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: discovery-service, namespace: whatsapp }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: discovery-service } }
+  template:
+    metadata:
+      labels: { app: discovery-service }
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8762"
+        prometheus.io/path: "/actuator/prometheus"
+    spec:
+      containers:
+        - name: discovery
+          image: discovery-service
+          ports: [ { containerPort: 8762 } ]
+          readinessProbe: { httpGet: { path: /actuator/health, port: 8762 }, initialDelaySeconds: 5, periodSeconds: 10 }

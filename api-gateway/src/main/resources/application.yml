@@ -1,0 +1,44 @@
+server:
+  port: 8080
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      default-filters: [ DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin ]
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowedOrigins: "*"
+            allowedMethods: "*"
+            allowedHeaders: "*"
+      routes:
+        - id: auth-service
+          uri: lb://auth-service
+          predicates: [ Path=/api/auth/** ]
+          filters: [ StripPrefix=1 ]
+        - id: chat-service-rest
+          uri: lb://chat-service
+          predicates: [ Path=/api/chat/** ]
+          filters: [ StripPrefix=1 ]
+        - id: chat-service-ws
+          uri: lb:ws://chat-service
+          predicates: [ Path=/ws/** ]
+          filters: [ StripPrefix=0 ]
+        - id: presence-service
+          uri: lb://presence-service
+          predicates: [ Path=/api/presence/** ]
+          filters: [ StripPrefix=1 ]
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://discovery-service:8762/eureka/}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true

@@ -1,0 +1,83 @@
+services:
+  postgres-chat:
+    image: postgres:16
+    environment: [ POSTGRES_USER=chat, POSTGRES_PASSWORD=vinay, POSTGRES_DB=chatdb ]
+    ports: [ "5440:5432" ]
+    volumes: [ "chat-data:/var/lib/postgresql/data" ]
+
+  postgres-auth:
+    image: postgres:16
+    environment: [ POSTGRES_USER=auth, POSTGRES_PASSWORD=vinay, POSTGRES_DB=authdb ]
+    ports: [ "5441:5432" ]
+    volumes: [ "auth-data:/var/lib/postgresql/data" ]
+
+  discovery-service:
+    build: ./discovery-service
+    ports: [ "8762:8762" ]
+
+  api-gateway:
+    build: ./api-gateway
+    environment: [ EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8762/eureka/ ]
+    ports: [ "8088:8080" ]
+    depends_on: [ discovery-service ]
+
+  auth-service:
+    build: ./auth-service
+    environment:
+      - SERVER_PORT=9100
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8762/eureka/
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-auth:5432/authdb
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=vinay
+      - JWT_SECRET=devsecret
+    depends_on: [ discovery-service, postgres-auth ]
+
+  chat-service-1:
+    build: ./chat-service
+    environment:
+      - SERVER_PORT=9101
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8762/eureka/
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-chat:5432/chatdb
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=vinay
+      - JWT_SECRET=devsecret
+    depends_on: [ discovery-service, postgres-chat ]
+
+  chat-service-2:
+    build: ./chat-service
+    environment:
+      - SERVER_PORT=9102
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8762/eureka/
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-chat:5432/chatdb
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=vinay
+      - JWT_SECRET=devsecret
+    depends_on: [ discovery-service, postgres-chat ]
+
+  presence-service:
+    build: ./presence-service
+    environment: [ SERVER_PORT=9103, EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8762/eureka/ ]
+    depends_on: [ discovery-service ]
+
+  frontend:
+    build: ./frontend
+    environment: [ VITE_API_BASE=http://localhost:8088 ]
+    ports: [ "5180:5173" ]
+    depends_on: [ api-gateway ]
+
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    volumes: [ "./k8s/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro" ]
+    command: [ '--config.file=/etc/prometheus/prometheus.yml' ]
+    ports: [ "9091:9090" ]
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    environment: [ GF_SECURITY_ADMIN_USER=admin, GF_SECURITY_ADMIN_PASSWORD=admin ]
+    ports: [ "3001:3000" ]
+    depends_on: [ prometheus ]
+    volumes: [ "./k8s/monitoring/grafana/provisioning:/etc/grafana/provisioning" ]
+
+volumes:
+  chat-data: { }
+  auth-data: { }

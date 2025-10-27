@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: presence-service, namespace: whatsapp }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: presence-service } }
+  template:
+    metadata:
+      labels: { app: presence-service }
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9103"
+        prometheus.io/path: "/actuator/prometheus"
+    spec:
+      containers:
+        - name: presence
+          image: presence-service
+          env:
+            - { name: SERVER_PORT, value: "9103" }
+            - { name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE, value: http://discovery-service:8762/eureka/ }
+          ports: [ { containerPort: 9103 } ]

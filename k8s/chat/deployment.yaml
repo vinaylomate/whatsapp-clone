@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: chat-service, namespace: whatsapp }
+spec:
+  replicas: 2
+  selector: { matchLabels: { app: chat-service } }
+  template:
+    metadata:
+      labels: { app: chat-service }
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9101"
+        prometheus.io/path: "/actuator/prometheus"
+    spec:
+      containers:
+        - name: chat
+          image: chat-service
+          env:
+            - { name: SERVER_PORT, value: "9101" }
+            - { name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE, value: http://discovery-service:8762/eureka/ }
+            - { name: SPRING_DATASOURCE_URL, value: jdbc:postgresql://postgres-chat:5432/chatdb }
+            - { name: SPRING_DATASOURCE_USERNAME, value: chat }
+            - { name: SPRING_DATASOURCE_PASSWORD, value: chatpass }
+            - { name: JWT_SECRET, value: devsecret }
+          ports: [ { containerPort: 9101 } ]

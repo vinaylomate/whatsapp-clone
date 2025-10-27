@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: auth-service, namespace: whatsapp }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: auth-service } }
+  template:
+    metadata:
+      labels: { app: auth-service }
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9100"
+        prometheus.io/path: "/actuator/prometheus"
+    spec:
+      containers:
+        - name: auth
+          image: auth-service
+          env:
+            - { name: SERVER_PORT, value: "9100" }
+            - { name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE, value: http://discovery-service:8762/eureka/ }
+            - { name: SPRING_DATASOURCE_URL, value: jdbc:postgresql://postgres-auth:5432/authdb }
+            - { name: SPRING_DATASOURCE_USERNAME, value: auth }
+            - { name: SPRING_DATASOURCE_PASSWORD, value: authpass }
+            - { name: JWT_SECRET, value: devsecret }
+          ports: [ { containerPort: 9100 } ]
